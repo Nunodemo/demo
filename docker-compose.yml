@@ -1,0 +1,35 @@
+version: '2'
+
+services:
+
+  PostgreSQL:
+    restart: always
+    container_name: postgre
+    image: sameersbn/postgresql:9.6-2
+    ports:
+      - "5432:5432"
+    environment:
+      - DEBUG=false
+      - DB_USER=user
+      - DB_PASS=pass
+      - DB_NAME=nuno
+    volumes:
+      - /srv/docker/postgresql:/var/lib/postgresql
+    networks:
+            - docker_network
+
+  Nuno:
+      restart: always
+      container_name: nuno
+      image: nuno/demo
+      ports:
+        - "18884:8080"
+        - "9014:9014"
+      environment:
+        - JAVA_OPTS=-Xmx100m
+      networks:
+        - docker_network
+
+networks:
+  docker_network:
+    driver: bridge

@@ -1,0 +1,184 @@
+swagger: '2.0'
+info:
+  title: Package API
+  description: A REST API to manage Packages
+  version: "1.0.0"
+host: api.NUNO.com
+schemes:
+  - https
+basePath: /v1
+produces:
+  - application/json
+parameters:
+  PackageId:
+    in: path
+    name: packageId
+    description: The ID of the package
+    required: true
+    type: integer
+    format: int64
+paths:
+  /packages:
+    post:
+      summary: Creates a package
+      description:
+        This endpoint is for creating a package
+      operationId: createPackage
+      tags:
+        - Packages
+      parameters:
+        - in: body
+          name: Package
+          description: The Package to be created
+          required: true
+          schema:
+            $ref: "#/definitions/PackageRequest"
+      responses:
+        201:
+          description: Package has been created
+          schema:
+            $ref: '#/definitions/PackageResponse'
+        400:
+          description: Request validation failed
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        404:
+          description: Product not found
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    get:
+      summary: Gets a filtered list of packages
+      description: |
+        This endpoint is for getting all service sets or a filtered subset
+      operationId: getAllPackages
+      tags:
+        - Packages
+      responses:
+        200:
+          description: Packages have been found
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/PackageResponse"
+        400:
+          description: Request validation failed
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /packages/{packageId}:
+    parameters:
+      - $ref: '#/parameters/PackageId'
+    get:
+      summary: Gets a package
+      description: |
+        This endpoint is for getting a package.
+      operationId: getPackage
+      tags:
+        - Packages
+      parameters:
+      - name: Currency
+        in: query
+        description: The currency to be returned
+        type: string
+        required: false
+      responses:
+        200:
+          description: Package has been found
+          schema:
+            $ref: "#/definitions/PackageResponse"
+    put:
+      summary: Updates a package
+      description: |
+        This endpoint is for updating a package.
+      operationId: updatePackage
+      tags:
+        - Packages
+      parameters:
+        - in: body
+          name: packageRequest
+          description: The updated package
+          required: true
+          schema:
+            $ref: "#/definitions/PackageRequest"
+      responses:
+        200:
+          description: Package has been updated
+          schema:
+            $ref: '#/definitions/PackageResponse'
+        400:
+          description: Request validation failed
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        404:
+          description: Product not found
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    delete:
+      summary: Deletes a package
+      description: |
+        This endpoint is for deleting a package
+      operationId: deletePackage
+      tags:
+        - Packages
+      responses:
+        200:
+          description: Package has been deleted
+        404:
+          description: Package not found
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+definitions:
+  PackageRequest:
+    type: object
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+      products:
+        type: array
+        items:
+          $ref: "#/definitions/ProductRequest"
+  PackageResponse:
+    type: object
+    properties:
+      id:
+        type: integer
+        format: int64
+      name:
+        type: string
+      description:
+        type: string
+      products:
+        type: array
+        items:
+          $ref: "#/definitions/ProductResponse"
+      price:
+        type: number
+  ProductRequest:
+    type: object
+    properties:
+      id:
+        type: string
+  ProductResponse:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+  ErrorResponse:
+    type: object
+    properties:
+      errors:
+        type: array
+        items:
+          $ref: "#/definitions/FieldErrorResponse"
+  FieldErrorResponse:
+    type: object
+    properties:
+      fieldName:
+        type: string
+      message:
+        type: string
