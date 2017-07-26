@@ -6,7 +6,6 @@ import com.NUNO.demo.api.generated.dto.ProductResponse;
 import com.NUNO.demo.entity.Package;
 import com.NUNO.demo.entity.Product;
 import com.google.common.collect.ImmutableList;
-
 import lombok.Builder;
 import lombok.Getter;
 
@@ -56,31 +55,28 @@ public class PackageVo {
         if (out == null) {
             out = new Package();
         }
-        out.setName(this.getName());
-        out.setDescription(this.getDescription());
+        out.setName(this.name);
+        out.setDescription(this.description);
 
         out.setProductList(
-                this.getProductList().stream().map((ProductVo productVo) -> {
-                    return productVo.voToEntity(null);
-                }).collect(Collectors.<Product>toList())
+                this.getProductList().stream().map(productVo -> productVo.voToEntity(null)
+                ).collect(Collectors.<Product>toList())
         );
 
         return out;
     }
 
     public PackageResponse voToResponse() {
-        PackageResponse out = new PackageResponse();
-        out.setId(this.getId());
-        out.setName(this.getName());
-        out.setDescription(this.getDescription());
-        out.setPrice(this.getProductList().stream()
-                .map(ProductVo::getPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
-        out.setProducts(this.getProductList().stream()
-                .map(ProductVo::voToResponse)
-                .collect(Collectors.<ProductResponse>toList())
-        );
-        return out;
+
+        return new PackageResponse().id(this.id)
+                .name(this.name)
+                .description(this.description)
+                .price(this.productList.stream()
+                        .map(ProductVo::getPrice)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .products(this.productList.stream()
+                        .map(ProductVo::voToResponse)
+                        .collect(Collectors.<ProductResponse>toList()));
     }
 }
 

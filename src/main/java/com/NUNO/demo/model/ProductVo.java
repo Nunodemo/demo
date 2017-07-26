@@ -3,8 +3,6 @@ package com.NUNO.demo.model;
 import com.NUNO.demo.api.generated.dto.ProductRequest;
 import com.NUNO.demo.api.generated.dto.ProductResponse;
 import com.NUNO.demo.entity.Product;
-
-
 import lombok.Builder;
 import lombok.Getter;
 
@@ -39,18 +37,18 @@ public class ProductVo {
         if (out == null) {
             out = new Product();
         }
-        out.setName(this.getName());
-        out.setExternalId(this.getExternalId());
-        out.setUsdPrice(this.getPrice());
+        out.setName(this.name);
+        out.setExternalId(this.externalId);
+        out.setUsdPrice(this.price);
         return out;
     }
 
     public ProductResponse voToResponse() {
-        ProductResponse out = new ProductResponse();
-        out.setName(this.getName());
-        out.setId(this.getExternalId());
-        out.setPrice(this.getPrice());
-        return out;
+        return new ProductResponse()
+                .id(this.externalId)
+                .name(this.name)
+                .price(this.price);
+
     }
 }
 

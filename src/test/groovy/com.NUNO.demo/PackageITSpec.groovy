@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment
+import org.springframework.http.HttpStatus
 import org.springframework.test.context.ContextConfiguration
 import retrofit2.Response
 import spock.lang.Specification
@@ -52,7 +53,7 @@ class PackageITSpec extends Specification {
         def aPackage = createPackage([product])
 
         when: "GET All Packages"
-        def response = calling({ packagesApi.getAllPackages().execute() }, 200) as PackageResponse[]
+        def response = calling({ packagesApi.getAllPackages().execute() }, HttpStatus.OK) as PackageResponse[]
 
         then: "The added packages found"
 
@@ -70,7 +71,7 @@ class PackageITSpec extends Specification {
 
     def "GET All Empty"() {
         when: "GET All Packages"
-        def response = calling({ packagesApi.getAllPackages().execute() }, 200) as PackageResponse[]
+        def response = calling({ packagesApi.getAllPackages().execute() }, HttpStatus.OK) as PackageResponse[]
 
         then: "The result matches"
         response.size() == 0
@@ -84,7 +85,7 @@ class PackageITSpec extends Specification {
         def aPackage = createPackage([product])
 
         when: "GET package"
-        def response = calling({ packagesApi.getPackage(aPackage.id, null).execute() }, 200) as PackageResponse
+        def response = calling({ packagesApi.getPackage(aPackage.id, null).execute() }, HttpStatus.OK) as PackageResponse
 
         then: "The result matches the database"
         response.price == product.usdPrice
@@ -111,7 +112,7 @@ class PackageITSpec extends Specification {
         def aPackage = createPackage([product])
 
         when: "GET package"
-        def response = calling({ packagesApi.getPackage(aPackage.id, currency).execute() }, 200) as PackageResponse
+        def response = calling({ packagesApi.getPackage(aPackage.id, currency).execute() }, HttpStatus.OK) as PackageResponse
 
         then: "The result matches and the currency was converted"
         if (currency == "USD") {
@@ -143,7 +144,7 @@ class PackageITSpec extends Specification {
         when: "Get endpoint is called"
         def response = calling({
             packagesApi.getPackage(ThreadLocalRandom.current().nextLong(99999), null).execute()
-        }, 404) as ErrorResponse
+        }, HttpStatus.NOT_FOUND) as ErrorResponse
 
         then: "An error is returned"
 
@@ -159,7 +160,7 @@ class PackageITSpec extends Specification {
         def aPackage = createPackage([product])
 
         when: "Delete package"
-        calling({ packagesApi.deletePackage(aPackage.id).execute() }, 200)
+        calling({ packagesApi.deletePackage(aPackage.id).execute() }, HttpStatus.OK)
 
         then: "The Packages no longer exists"
         packageRepo.findAll().every { it.id != aPackage.id }
@@ -176,7 +177,7 @@ class PackageITSpec extends Specification {
         when: "Delete endpoint is called"
         def response = calling({
             packagesApi.deletePackage(ThreadLocalRandom.current().nextLong(99999)).execute()
-        }, 404) as ErrorResponse
+        }, HttpStatus.NOT_FOUND) as ErrorResponse
 
         then: "An error is returned"
 
@@ -195,7 +196,7 @@ class PackageITSpec extends Specification {
                 products: [new ProductRequest(id: product.externalId)])
 
         when: "POST package"
-        def response = calling({ packagesApi.createPackage(packageRequest).execute() }, 201) as PackageResponse
+        def response = calling({ packagesApi.createPackage(packageRequest).execute() }, HttpStatus.CREATED) as PackageResponse
 
         then: "The result matches"
         response.price == product.usdPrice
@@ -218,7 +219,7 @@ class PackageITSpec extends Specification {
 
         when: "POST package"
         def response = calling({ packagesApi.createPackage(packageRequest).execute() }
-                , 404) as ErrorResponse
+                , HttpStatus.NOT_FOUND) as ErrorResponse
 
         then: "An error is returned"
         response.errors.size() == 1
@@ -242,7 +243,7 @@ class PackageITSpec extends Specification {
                            new ProductRequest(id: product.externalId)])
 
         when: "POST package"
-        calling({ packagesApi.updatePackage(aPackage.id, packageRequest).execute() }, 200)
+        calling({ packagesApi.updatePackage(aPackage.id, packageRequest).execute() }, HttpStatus.OK)
 
         then: "The result matches the request"
         def dbPackage = packageRepo.findOne aPackage.id
@@ -269,7 +270,7 @@ class PackageITSpec extends Specification {
         when: "POST package"
         def response = calling({
             packagesApi.updatePackage(aPackage.id, packageRequest).execute()
-        }, 404) as ErrorResponse
+        }, HttpStatus.NOT_FOUND) as ErrorResponse
 
         then: "An error is returned"
         response.errors.size() == 1
@@ -280,7 +281,7 @@ class PackageITSpec extends Specification {
         packageRepo.deleteAll()
     }
 
-    private Package createPackage( products) {
+    private Package createPackage(products) {
         packageRepo.save(new Package(name: "package",
                 description: "package description",
                 productList: products))
@@ -293,9 +294,9 @@ class PackageITSpec extends Specification {
         ))
     }
 
-    def calling(Closure methodToCall, int expectedResponseCode) {
+    def calling(Closure methodToCall, HttpStatus expectedStatus) {
         def response = methodToCall.call() as Response
-        assert response.code() == expectedResponseCode
+        assert response.code() == expectedStatus.value()
 
         if (response.successful) {
 

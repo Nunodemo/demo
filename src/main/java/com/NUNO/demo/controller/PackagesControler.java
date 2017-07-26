@@ -48,7 +48,7 @@ public class PackagesControler implements PackagesApi {
     }
 
     @Override
-    public ResponseEntity<PackageResponse> getPackage(@ApiParam(value = "The ID of the package",required=true ) @PathVariable("packageId") Long packageId,
+    public ResponseEntity<PackageResponse> getPackage(@ApiParam(value = "The ID of the package", required = true) @PathVariable("packageId") Long packageId,
                                                       @ApiParam(value = "The currency to be returned") @RequestParam(value = "currency", required = false) String currency) {
         PackageResponse get = packageService.getPackage(packageId, currency).voToResponse();
         return ResponseEntity.status(HttpStatus.OK).body(get);

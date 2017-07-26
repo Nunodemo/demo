@@ -14,7 +14,7 @@ services:
       - DB_PASS=pass
       - DB_NAME=nuno
     volumes:
-      - /srv/docker/postgresql:/var/lib/postgresql
+      - /srv/docker/postgresql/var/lib/postgresql
     networks:
             - docker_network
 
