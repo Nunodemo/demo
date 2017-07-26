@@ -75,7 +75,7 @@ paths:
       tags:
         - Packages
       parameters:
-      - name: Currency
+      - name: currency
         in: query
         description: The currency to be returned
         type: string

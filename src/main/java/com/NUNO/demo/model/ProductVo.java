@@ -1,8 +1,10 @@
 package com.NUNO.demo.model;
 
+import com.NUNO.demo.api.generated.dto.ProductRequest;
+import com.NUNO.demo.api.generated.dto.ProductResponse;
 import com.NUNO.demo.entity.Product;
-import io.swagger.model.ProductRequest;
-import io.swagger.model.ProductResponse;
+
+
 import lombok.Builder;
 import lombok.Getter;
 

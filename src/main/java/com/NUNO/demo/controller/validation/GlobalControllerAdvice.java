@@ -1,9 +1,10 @@
 package com.NUNO.demo.controller.validation;
 
+import com.NUNO.demo.api.generated.dto.ErrorResponse;
+import com.NUNO.demo.api.generated.dto.FieldErrorResponse;
 import com.NUNO.demo.exception.BadRequestException;
 import com.NUNO.demo.exception.ResourceNotFoundException;
-import io.swagger.model.ErrorResponse;
-import io.swagger.model.FieldErrorResponse;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindingResult;

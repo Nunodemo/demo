@@ -1,11 +1,12 @@
 package com.NUNO.demo.model;
 
+import com.NUNO.demo.api.generated.dto.PackageRequest;
+import com.NUNO.demo.api.generated.dto.PackageResponse;
+import com.NUNO.demo.api.generated.dto.ProductResponse;
 import com.NUNO.demo.entity.Package;
 import com.NUNO.demo.entity.Product;
 import com.google.common.collect.ImmutableList;
-import io.swagger.model.PackageRequest;
-import io.swagger.model.PackageResponse;
-import io.swagger.model.ProductResponse;
+
 import lombok.Builder;
 import lombok.Getter;
 

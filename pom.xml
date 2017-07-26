@@ -23,11 +23,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
-        <swagger.codegen.version>2.1.5</swagger.codegen.version>
+        <swagger.codegen.version>2.2.2</swagger.codegen.version>
         <swagger.version>1.5.4</swagger.version>
         <springfox.version>2.4.0</springfox.version>
         <guava.version>22.0</guava.version>
         <lombok.version>1.16.18</lombok.version>
+        <retrofit.version>2.2.0</retrofit.version>
+        <apache.commons.lang.version>3.5</apache.commons.lang.version>
+        <oltu.version>1.0.0</oltu.version>
+        <jackson-datatype-jsr310.version>2.6.1</jackson-datatype-jsr310.version>
     </properties>
 
     <dependencies>
@@ -109,6 +113,24 @@
             <version>1.4.195</version>
             <scope>test</scope>
         </dependency>
+        <!-- Retrofit -->
+        <dependency>
+            <groupId>com.squareup.retrofit2</groupId>
+            <artifactId>retrofit</artifactId>
+            <version>${retrofit.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.retrofit2</groupId>
+            <artifactId>converter-scalars</artifactId>
+            <version>${retrofit.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.retrofit2</groupId>
+            <artifactId>converter-gson</artifactId>
+            <version>${retrofit.version}</version>
+        </dependency>
 
         <!-- Utils -->
         <dependency>
@@ -126,6 +148,24 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-test</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${apache.commons.lang.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.oltu.oauth2</groupId>
+            <artifactId>org.apache.oltu.oauth2.client</artifactId>
+            <version>${oltu.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson-datatype-jsr310.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -168,6 +208,37 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.10</version>
+                <executions>
+                    <execution>
+                        <id>add_sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${basedir}/target/generated-sources</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add_test_sources</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${basedir}/target/generated-test-sources</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Generate REST default interface from Swagger spec-->
             <plugin>
                 <groupId>io.swagger</groupId>
@@ -180,15 +251,44 @@
                         </goals>
                         <configuration>
                             <inputSpec>src/main/resources/swagger.yaml</inputSpec>
-                            <language>spring-mvc</language>
+                            <modelPackage>${project.groupId}.demo.api.generated.dto</modelPackage>
+                            <apiPackage>${project.groupId}.demo.api.generated.controller</apiPackage>
+                            <language>spring</language>
                             <configOptions>
-                                <sourceFolder>src/gen/java/main</sourceFolder>
-                                <library>j8-async</library>
+                                <sourceFolder>src/gen/java</sourceFolder>
+                                <dateLibrary>java8</dateLibrary>
+                                <library>spring-boot</library>
+                                <interfaceOnly>true</interfaceOnly>
                             </configOptions>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-inventory-client-api</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <output>${project.build.directory}/generated-test-sources/swagger</output>
+                            <addCompileSourceRoot>false</addCompileSourceRoot>
+                            <inputSpec>src/main/resources/swagger.yaml</inputSpec>
+                            <invokerPackage>${project.groupId}.demo.generated.client</invokerPackage>
+                            <apiPackage>${project.groupId}.demo.generated.client.api</apiPackage>
+                            <modelPackage>${project.groupId}.demo.generated.client.model</modelPackage>
+                            <language>java</language>
+                            <configOptions>
+                                <sourceFolder>src/gen/java</sourceFolder>
+                                <library>retrofit2</library>
+                            </configOptions>
+                            <environmentVariables>
+                                <apiTests>false</apiTests>
+                                <modelTests>false</modelTests>
+                            </environmentVariables>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+
             <plugin>
                 <groupId>com.spotify</groupId>
                 <artifactId>dockerfile-maven-plugin</artifactId>

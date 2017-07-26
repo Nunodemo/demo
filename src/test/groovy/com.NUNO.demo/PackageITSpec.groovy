@@ -2,27 +2,31 @@ package com.NUNO.demo
 
 import com.NUNO.demo.entity.Package
 import com.NUNO.demo.entity.Product
+import com.NUNO.demo.generated.client.ApiClient
+import com.NUNO.demo.generated.client.api.PackagesApi
+import com.NUNO.demo.generated.client.model.ErrorResponse
+import com.NUNO.demo.generated.client.model.PackageRequest
+import com.NUNO.demo.generated.client.model.PackageResponse
+import com.NUNO.demo.generated.client.model.ProductRequest
 import com.NUNO.demo.repository.PackageRepository
 import com.NUNO.demo.repository.ProductRepository
-import io.swagger.model.ErrorResponse
-import io.swagger.model.PackageRequest
-import io.swagger.model.PackageResponse
-import io.swagger.model.ProductRequest
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment
-import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.test.context.ContextConfiguration
+import retrofit2.Response
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import java.util.concurrent.ThreadLocalRandom
 
 @ContextConfiguration
 @SpringBootTest(classes = [DemoApplication], webEnvironment = WebEnvironment.RANDOM_PORT)
 class PackageITSpec extends Specification {
 
-    @Autowired
-    TestRestTemplate restTemplate
+    PackagesApi packagesApi
 
     @Autowired
     ProductRepository productRepo
@@ -30,25 +34,28 @@ class PackageITSpec extends Specification {
     @Autowired
     PackageRepository packageRepo
 
+    @Autowired
+    ObjectMapper objectMapper
+
     @Value('${local.server.port}')
     int port
 
+    def setup() {
+        packagesApi = generateClient(PackagesApi) as PackagesApi
+    }
+
     def "GET All endpoint"() {
         given: "A Product"
-        def product = productRepo.save(new Product(name: "product",
-                externalId: UUID.randomUUID(),
-                usdPrice: new BigDecimal(100)
-        ))
+        def product = createProduct()
 
         and: "A Package that contains the previous product"
-        def aPackage = packageRepo.save(new Package(name: "package",
-                description: "package description",
-                productList: [product]))
+        def aPackage = createPackage([product])
 
         when: "GET All Packages"
-        PackageResponse[] response = restTemplate.getForObject("http://localhost:" + port + "/packages", PackageResponse[].class)
+        def response = calling({ packagesApi.getAllPackages().execute() }, 200) as PackageResponse[]
 
         then: "The added packages found"
+
         response.size() > 0
         response.any {
             it.id == aPackage.id && it.name == aPackage.name &&
@@ -63,38 +70,30 @@ class PackageITSpec extends Specification {
 
     def "GET All Empty"() {
         when: "GET All Packages"
-        PackageResponse[] response = restTemplate.getForObject("http://localhost:" + port + "/packages", PackageResponse[].class)
+        def response = calling({ packagesApi.getAllPackages().execute() }, 200) as PackageResponse[]
 
         then: "The result matches"
         response.size() == 0
-        cleanup:
-        packageRepo.deleteAll()
-        productRepo.deleteAll()
     }
 
     def "GET endpoint no price conversion"() {
         given: "A Product"
-        def product = productRepo.save(new Product(name: "product",
-                externalId: UUID.randomUUID(),
-                usdPrice: new BigDecimal(100)
-        ))
+        def product = createProduct()
 
         and: "A Package that contains the previous product"
-        def aPackage = packageRepo.save(new Package(name: "package",
-                description: "package description",
-                productList: [product]))
+        def aPackage = createPackage([product])
 
         when: "GET package"
-        def result = restTemplate.getForObject("http://localhost:" + port + "/packages/" + aPackage.id, PackageResponse.class)
+        def response = calling({ packagesApi.getPackage(aPackage.id, null).execute() }, 200) as PackageResponse
 
         then: "The result matches the database"
-        result.price == product.usdPrice
-        result.name == aPackage.name
-        result.products.size() == aPackage.productList.size()
-        [result.products.sort { it.id }, aPackage.productList.sort { it.id }].transpose().collect {
-            assert it[0].id == it[1].externalId;
-            assert it[0].name == it[1].name;
-            assert it[0].price == it[1].usdPrice;
+        response.price == product.usdPrice
+        response.name == aPackage.name
+        response.products.size() == aPackage.productList.size()
+        [response.products.sort { it.id }, aPackage.productList.sort { it.id }].transpose().collect {
+            assert it[0].id == it[1].externalId
+            assert it[0].name == it[1].name
+            assert it[0].price == it[1].usdPrice
         }
 
         cleanup:
@@ -102,31 +101,27 @@ class PackageITSpec extends Specification {
         productRepo.deleteAll()
     }
 
+
     @Unroll
     def "GET endpoint price as #currency"() {
         given: "A Product"
-        def product = productRepo.save(new Product(name: "product",
-                externalId: UUID.randomUUID(),
-                usdPrice: new BigDecimal(100)
-        ))
+        def product = createProduct()
 
         and: "A Package"
-        def aPackage = packageRepo.save(new Package(name: "package",
-                description: "package description",
-                productList: [product]))
+        def aPackage = createPackage([product])
 
         when: "GET package"
-        def result = restTemplate.getForObject("http://localhost:" + port + "/packages/" + aPackage.id + "?currency=" + currency, PackageResponse.class)
+        def response = calling({ packagesApi.getPackage(aPackage.id, currency).execute() }, 200) as PackageResponse
 
         then: "The result matches and the currency was converted"
         if (currency == "USD") {
-            assert result.price == product.usdPrice
+            assert response.price == product.usdPrice
         } else {
-            assert result.price != product.usdPrice
+            assert response.price != product.usdPrice
         }
-        result.name == aPackage.name
-        result.products.size() == aPackage.productList.size()
-        [result.products.sort { it.id }, aPackage.productList.sort { it.id }].transpose().collect {
+        response.name == aPackage.name
+        response.products.size() == aPackage.productList.size()
+        [response.products.sort { it.id }, aPackage.productList.sort { it.id }].transpose().collect {
             if (currency == "USD") {
                 assert it[0].price == it[1].usdPrice
             } else {
@@ -146,28 +141,25 @@ class PackageITSpec extends Specification {
 
     def "Get endpoint no such package"() {
         when: "Get endpoint is called"
-        def result = restTemplate.getForObject("http://localhost:" + port + "/packages/" + (Math.random() * 9999), ErrorResponse.class)
+        def response = calling({
+            packagesApi.getPackage(ThreadLocalRandom.current().nextLong(99999), null).execute()
+        }, 404) as ErrorResponse
 
         then: "An error is returned"
 
-        result.errors.size() == 1
-        result.errors.any { it.fieldName == "ID" && it.message.contains("Package with ID not found:") }
+        response.errors.size() == 1
+        response.errors.any { it.fieldName == "ID" && it.message.contains("Package with ID not found:") }
     }
 
     def "Delete a package"() {
         given: "A Product"
-        def product = productRepo.save(new Product(name: "product",
-                externalId: UUID.randomUUID(),
-                usdPrice: new BigDecimal(100)
-        ))
+        def product = createProduct()
 
         and: "A Package that contains the previous product"
-        def aPackage = packageRepo.save(new Package(name: "package",
-                description: "package description",
-                productList: [product]))
+        def aPackage = createPackage([product])
 
         when: "Delete package"
-        restTemplate.delete("http://localhost:" + port + "/packages/" + aPackage.id)
+        calling({ packagesApi.deletePackage(aPackage.id).execute() }, 200)
 
         then: "The Packages no longer exists"
         packageRepo.findAll().every { it.id != aPackage.id }
@@ -180,12 +172,22 @@ class PackageITSpec extends Specification {
         productRepo.deleteAll()
     }
 
+    def "Delete endpoint no such package"() {
+        when: "Delete endpoint is called"
+        def response = calling({
+            packagesApi.deletePackage(ThreadLocalRandom.current().nextLong(99999)).execute()
+        }, 404) as ErrorResponse
+
+        then: "An error is returned"
+
+        response.errors.size() == 1
+        response.errors.any { it.fieldName == "ID" && it.message.contains("Package with ID not found:") }
+    }
+
+
     def "POST a package"() {
         given: "A Product"
-        def product = productRepo.save(new Product(name: "product",
-                externalId: UUID.randomUUID(),
-                usdPrice: new BigDecimal(100)
-        ))
+        def product = createProduct()
 
         and: "A Package request"
         def packageRequest = new PackageRequest(name: "New Package",
@@ -193,9 +195,7 @@ class PackageITSpec extends Specification {
                 products: [new ProductRequest(id: product.externalId)])
 
         when: "POST package"
-        def response = restTemplate
-                .postForObject("http://localhost:" + port + "/packages", packageRequest, PackageResponse.class)
-
+        def response = calling({ packagesApi.createPackage(packageRequest).execute() }, 201) as PackageResponse
 
         then: "The result matches"
         response.price == product.usdPrice
@@ -217,9 +217,8 @@ class PackageITSpec extends Specification {
                 products: [new ProductRequest(id: UUID.randomUUID())])
 
         when: "POST package"
-        def response = restTemplate
-                .postForObject("http://localhost:" + port + "/packages", packageRequest, ErrorResponse.class)
-
+        def response = calling({ packagesApi.createPackage(packageRequest).execute() }
+                , 404) as ErrorResponse
 
         then: "An error is returned"
         response.errors.size() == 1
@@ -231,15 +230,10 @@ class PackageITSpec extends Specification {
 
     def "Update a package"() {
         given: "A Product"
-        def product = productRepo.save(new Product(name: "product",
-                externalId: UUID.randomUUID(),
-                usdPrice: new BigDecimal(100)
-        ))
+        def product = createProduct()
 
         and: "A Package that contains the previous product"
-        def aPackage = packageRepo.save(new Package(name: "package",
-                description: "package description",
-                productList: [product]))
+        def aPackage = createPackage([product])
 
         and: "A Package request"
         def packageRequest = new PackageRequest(name: "New Package",
@@ -248,7 +242,7 @@ class PackageITSpec extends Specification {
                            new ProductRequest(id: product.externalId)])
 
         when: "POST package"
-        restTemplate.put("http://localhost:" + port + "/packages/" + aPackage.id, packageRequest)
+        calling({ packagesApi.updatePackage(aPackage.id, packageRequest).execute() }, 200)
 
         then: "The result matches the request"
         def dbPackage = packageRepo.findOne aPackage.id
@@ -263,5 +257,60 @@ class PackageITSpec extends Specification {
         productRepo.deleteAll()
     }
 
+    def "Update a package Invalid product"() {
+        given: "A Package"
+        def aPackage = createPackage([])
+
+        and: "A Package request"
+        def packageRequest = new PackageRequest(name: "New Package",
+                description: "description",
+                products: [new ProductRequest(id: ThreadLocalRandom.current().nextLong(99999))])
+
+        when: "POST package"
+        def response = calling({
+            packagesApi.updatePackage(aPackage.id, packageRequest).execute()
+        }, 404) as ErrorResponse
+
+        then: "An error is returned"
+        response.errors.size() == 1
+        response.errors.any { it.fieldName == "ID" && it.message.contains("Product with ID not found:") }
+
+
+        cleanup:
+        packageRepo.deleteAll()
+    }
+
+    private Package createPackage( products) {
+        packageRepo.save(new Package(name: "package",
+                description: "package description",
+                productList: products))
+    }
+
+    private Product createProduct() {
+        productRepo.save(new Product(name: "product",
+                externalId: UUID.randomUUID(),
+                usdPrice: new BigDecimal(100)
+        ))
+    }
+
+    def calling(Closure methodToCall, int expectedResponseCode) {
+        def response = methodToCall.call() as Response
+        assert response.code() == expectedResponseCode
+
+        if (response.successful) {
+
+            return response.body()
+        } else {
+            return objectMapper.readValue(response.errorBody().string(), ErrorResponse)
+        }
+    }
+
+    def generateClient(Class c) {
+        new ApiClient()
+                .adapterBuilder
+                .baseUrl("http://localhost:" + port + "/")
+                .build()
+                .create(c)
+    }
 
 }
